@@ -1,0 +1,11 @@
+{
+  "name": "logseq-securechat-command",
+  "version": "0.0.1",
+  "description": "Invoke Prisme.ai SecureChat in logseq",
+  "main": "index.html",
+  "author": "Sebastien Migniot",
+  "license": "MIT",
+  "logseq": {
+    "id": "_a7056cfa7"
+  }
+}
