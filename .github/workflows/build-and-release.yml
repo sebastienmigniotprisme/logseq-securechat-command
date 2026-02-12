@@ -1,5 +1,10 @@
 name: Build and Release
 
+on:
+  push:
+    tags: ['v[0-9].[0-9]+.[0-9]+']
+    branches: [master,main]
+
 jobs:
   build:
     runs-on: ubuntu-latest
