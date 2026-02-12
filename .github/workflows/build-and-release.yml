@@ -21,13 +21,13 @@ jobs:
           
       - name: Create zip
         run: |
-          zip -r "${{ github.event.repository.name }}-${{ github.ref.name }}.zip" dist
+          zip -r "${{ github.event.repository.name }}-${GITHUB_REF##*/}.zip" dist
           
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: "${{ github.event.repository.name }}-${{ github.ref.name }}.zip"
-          path: "${{ github.event.repository.name }}-${{ github.ref.name }}.zip"
+          name: "${{ github.event.repository.name }}-${GITHUB_REF##*/}.zip"
+          path: "${{ github.event.repository.name }}-${GITHUB_REF##*/}.zip"
 
   release:
     runs-on: ubuntu-latest
@@ -41,8 +41,8 @@ jobs:
         id: create_release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ github.ref.name }}
-          release_name: ${{ github.ref.name }}
+          tag_name: ${GITHUB_REF##*/}
+          release_name: ${GITHUB_REF##*/}
           body: "Release notes for version ${{ github.ref.name }}"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Automatically provided secret
@@ -50,8 +50,8 @@ jobs:
       - name: Upload zip to release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ github.ref.name }}
-          files: "${{ github.event.repository.name }}-${{ github.ref.name }}.zip" 
+          tag_name: ${GITHUB_REF##*/}
+          files: "${{ github.event.repository.name }}-${GITHUB_REF##*/}.zip" 
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Automatically provided secret
 
