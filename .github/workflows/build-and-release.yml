@@ -20,15 +20,13 @@ jobs:
           
       - name: Create zip
         run: |
-          MY_BRANCH_OR_TAG=${{ github.ref }}
-          MY_BRANCH_OR_TAG=${MY_BRANCH_OR_TAG##*/} # Get the tag or branch name
-          zip -r "${{ github.event.repository.name }}-${MY_BRANCH_OR_TAG}.zip" dist
+          zip -r "${{ github.event.repository.name }}-${{ github.ref }}.zip" dist
           
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: "${{ github.event.repository.name }}-${MY_BRANCH_OR_TAG}.zip"
-          path: "${{ github.event.repository.name }}-${MY_BRANCH_OR_TAG}.zip"
+          name: "${{ github.event.repository.name }}-${{ github.ref }}.zip"
+          path: "${{ github.event.repository.name }}-${{ github.ref }}.zip"
 
   release:
     runs-on: ubuntu-latest
