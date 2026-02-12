@@ -1,0 +1,57 @@
+stages:
+  - build
+  - release
+
+variables:
+  MY_BRANCH_OR_TAG: "${CI_COMMIT_TAG:-${CI_COMMIT_REF_NAME}}"
+
+build-job:
+  stage: build
+  image: debian:stable-slim
+  script:
+    - apt-get update
+    - apt-get install -y zip
+    - mkdir -p dist
+    - cp index.html index.js dist
+    - zip -r ${CI_PROJECT_NAME}-${MY_BRANCH_OR_TAG}.zip dist
+  artifatcs:
+    paths:
+      - ${CI_PROJECT_NAME}-${MY_BRANCH_OR_TAG}.zip
+
+release:
+  stage: release
+  image: debian:stable-slim
+  only:
+    - tags
+  dependencies:
+    - build
+  script:
+    - apt-get update
+    - apt-get install -y curl jq
+    - TAG_NAME=${CI_COMMIT_TAG}
+    - echo "Creating GitHub release for ${TAG_NAME}"
+    - |
+      # Create the GitHub release
+      curl -X POST \
+        -H "Authorization: token ${GITHUB_TOKEN}" \
+        -H "Content-Type: application/json" \
+        -d '{
+            "tag_name": "'"${TAG_NAME}"'",
+            "name": "'"${TAG_NAME}"'",
+            "body": "Release notes for version "'"${TAG_NAME}"'",
+            "draft": false,
+            "prerelease": false
+          }' \
+        https://api.github.com/repos/yourusername/yourrepository/releases \
+        | jq -r .id > release_id.txt
+
+    - RELEASE_ID=$(cat release_id.txt)
+
+    - echo "Uploading artifacts to GitHub release"
+    - |
+      curl -X POST \
+        -H "Authorization: token ${GITHUB_TOKEN}" \
+        -H "Content-Type: application/zip" \
+        --data-binary @"${CI_PROJECT_NAME}-${MY_BRANCH_OR_TAG}.zip" \
+        "https://uploads.github.com/repos/yourusername/yourrepository/releases/${RELEASE_ID}/assets?name=${CI_PROJECT_NAME}-${MY_BRANCH_OR_TAG}.zip" 
+
