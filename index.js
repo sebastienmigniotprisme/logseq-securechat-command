@@ -59,9 +59,10 @@ function main () {
           prompt: blockContent + ":\n\n" + containerContent,
         }),
       }).then(r=>r.json())
-      .then(data=>{
+      .then(async data=>{
         console.log("Response", data);
-        logseq.Editor.updateBlock(current.uuid, data.response);
+        const blocks = parseMarkdownToBlocks(data.response);
+        await logseq.Editor.insertBatchBlock(current.uuid, blocks, { sibling: false });
       });
     },
   );
@@ -90,6 +91,94 @@ async function walkBlock(block, level, callback) {
       walkBlock(child,(level||0)+1,callback);
     }
   }
+}
+
+function parseMarkdownToBlocks(markdown) {
+  const lines = markdown.split("\n");
+  const blocks = [];
+  let i = 0;
+
+  while (i < lines.length) {
+    const line = lines[i];
+
+    // Skip blank lines
+    if (line.trim() === "") {
+      i++;
+      continue;
+    }
+
+    // Fenced code block — collect until closing fence
+    if (line.trimStart().startsWith("```")) {
+      const codeLines = [line];
+      i++;
+      while (i < lines.length && !lines[i].trimStart().startsWith("```")) {
+        codeLines.push(lines[i]);
+        i++;
+      }
+      if (i < lines.length) {
+        codeLines.push(lines[i]); // closing fence
+        i++;
+      }
+      blocks.push({ content: codeLines.join("\n") });
+      continue;
+    }
+
+    // List items — collect consecutive list lines, build nested tree
+    const listMatch = line.match(/^(\s*)([-*]|\d+\.)\s/);
+    if (listMatch) {
+      const listItems = [];
+      while (i < lines.length) {
+        const m = lines[i].match(/^(\s*)([-*]|\d+\.)\s(.*)/);
+        if (!m) break;
+        listItems.push({ indent: m[1].length, content: m[3] });
+        i++;
+      }
+      blocks.push(...buildListTree(listItems, 0));
+      continue;
+    }
+
+    // Paragraph — collect consecutive non-empty, non-special lines
+    const paraLines = [];
+    while (i < lines.length && lines[i].trim() !== "" &&
+           !lines[i].trimStart().startsWith("```") &&
+           !lines[i].match(/^(\s*)([-*]|\d+\.)\s/)) {
+      paraLines.push(lines[i]);
+      i++;
+    }
+    blocks.push({ content: paraLines.join("\n") });
+  }
+
+  return blocks;
+}
+
+function buildListTree(items, startIdx) {
+  const roots = [];
+  let i = startIdx;
+  const baseIndent = items.length > 0 ? items[0].indent : 0;
+
+  while (i < items.length) {
+    const item = items[i];
+    if (item.indent < baseIndent) break;
+
+    if (item.indent === baseIndent) {
+      const block = { content: item.content, children: [] };
+      roots.push(block);
+      i++;
+      // Collect children with greater indent
+      const childStart = i;
+      while (i < items.length && items[i].indent > baseIndent) {
+        i++;
+      }
+      if (childStart < i) {
+        block.children = buildListTree(items.slice(childStart, i), 0);
+      }
+      if (block.children.length === 0) delete block.children;
+    } else {
+      // Shouldn't reach here, but advance to avoid infinite loop
+      i++;
+    }
+  }
+  return roots;
 }
 
 // Bootstrap
